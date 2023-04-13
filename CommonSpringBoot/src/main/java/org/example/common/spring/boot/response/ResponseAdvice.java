@@ -4,10 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.common.response.ResponseResult;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 @ControllerAdvice
@@ -21,7 +23,12 @@ public class ResponseAdvice implements ResponseBodyAdvice {
      */
     @Override
     public boolean supports(MethodParameter methodParameter, Class aClass) {
-        return true;
+        // 添加了 @ResponseBody、@RestController 这两个注解的才进行包装
+        if (methodParameter.getMethodAnnotation(ResponseBody.class) != null ||
+                AnnotationUtils.findAnnotation(methodParameter.getContainingClass(), ResponseBody.class) != null) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -40,7 +47,8 @@ public class ResponseAdvice implements ResponseBodyAdvice {
         if (body instanceof ResponseResult) {
             return body;
         }
-        if (String.class.equals(methodParameter.getMethod().getReturnType())) { // 返回类型是 String（特殊）
+        // 返回类型是 String（特殊）
+        if (String.class.equals(methodParameter.getMethod().getReturnType())) {
             ObjectMapper objectMapper = new ObjectMapper();
             try {
                 return objectMapper.writeValueAsString(ResponseResult.success(body));
